@@ -11,8 +11,13 @@ import android.os.Bundle;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -21,10 +26,13 @@ import com.google.android.gms.vision.MultiProcessor;
 import com.google.android.gms.vision.Tracker;
 import com.google.android.gms.vision.face.Face;
 import com.google.android.gms.vision.face.FaceDetector;
-import com.google.android.gms.samples.vision.face.facetracker.ui.camera.CameraSourcePreview;
-import com.google.android.gms.samples.vision.face.facetracker.ui.camera.GraphicOverlay;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
+import online.senya.facerotdetector.ui.camera.CameraSourcePreview;
+import online.senya.facerotdetector.ui.camera.GraphicOverlay;
 
 /**
  * Activity for the face tracker app.  This app detects faces with the rear facing camera, and draws
@@ -37,6 +45,8 @@ public final class MainActivity extends AppCompatActivity {
 
     private CameraSourcePreview mPreview;
     private GraphicOverlay mGraphicOverlay;
+    private RecyclerView facesView;
+    private FacesAdapter adapter = new FacesAdapter();
 
     private static final int RC_HANDLE_GMS = 9001;
     // permission request codes need to be < 256
@@ -52,10 +62,14 @@ public final class MainActivity extends AppCompatActivity {
     @Override
     public void onCreate(Bundle icicle) {
         super.onCreate(icicle);
-        setContentView(R.layout.main);
+        setContentView(R.layout.activity_main);
 
         mPreview = (CameraSourcePreview) findViewById(R.id.preview);
         mGraphicOverlay = (GraphicOverlay) findViewById(R.id.faceOverlay);
+        facesView = (RecyclerView) findViewById(R.id.faces);
+
+        facesView.setLayoutManager(new LinearLayoutManager(this));
+        facesView.setAdapter(adapter);
 
         // Check for the camera permission before accessing the camera.  If the
         // permission is not granted yet, request permission.
@@ -108,6 +122,9 @@ public final class MainActivity extends AppCompatActivity {
 
         Context context = getApplicationContext();
         FaceDetector detector = new FaceDetector.Builder(context)
+                .setTrackingEnabled(true)
+                .setLandmarkType(FaceDetector.ALL_LANDMARKS)
+                .setMode(FaceDetector.ACCURATE_MODE)
                 .setClassificationType(FaceDetector.ALL_CLASSIFICATIONS)
                 .build();
 
@@ -129,7 +146,7 @@ public final class MainActivity extends AppCompatActivity {
 
         mCameraSource = new CameraSource.Builder(context, detector)
                 .setRequestedPreviewSize(640, 480)
-                .setFacing(CameraSource.CAMERA_FACING_BACK)
+                .setFacing(CameraSource.CAMERA_FACING_FRONT)
                 .setRequestedFps(30.0f)
                 .build();
     }
@@ -165,22 +182,7 @@ public final class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Callback for the result from requesting permissions. This method
-     * is invoked for every call on {@link #requestPermissions(String[], int)}.
-     * <p>
-     * <strong>Note:</strong> It is possible that the permissions request interaction
-     * with the user is interrupted. In this case you will receive empty permissions
-     * and results arrays which should be treated as a cancellation.
-     * </p>
-     *
-     * @param requestCode  The request code passed in {@link #requestPermissions(String[], int)}.
-     * @param permissions  The requested permissions. Never null.
-     * @param grantResults The grant results for the corresponding permissions
-     *                     which is either {@link PackageManager#PERMISSION_GRANTED}
-     *                     or {@link PackageManager#PERMISSION_DENIED}. Never null.
-     * @see #requestPermissions(String[], int)
-     */
+
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         if (requestCode != RC_HANDLE_CAMERA_PERM) {
@@ -212,15 +214,7 @@ public final class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    //==============================================================================================
-    // Camera Source Preview
-    //==============================================================================================
 
-    /**
-     * Starts or restarts the camera source, if it exists.  If the camera source doesn't exist yet
-     * (e.g., because onResume was called before the camera source was created), this will be called
-     * again when the camera source is created.
-     */
     private void startCameraSource() {
 
         // check that the device has play services available.
@@ -254,7 +248,7 @@ public final class MainActivity extends AppCompatActivity {
     private class GraphicFaceTrackerFactory implements MultiProcessor.Factory<Face> {
         @Override
         public Tracker<Face> create(Face face) {
-            return new GraphicFaceTracker(mGraphicOverlay);
+            return new GraphicFaceTracker(mGraphicOverlay, face);
         }
     }
 
@@ -265,8 +259,11 @@ public final class MainActivity extends AppCompatActivity {
     private class GraphicFaceTracker extends Tracker<Face> {
         private GraphicOverlay mOverlay;
         private FaceGraphic mFaceGraphic;
+        private FaceWrapper faceWrapper;
 
-        GraphicFaceTracker(GraphicOverlay overlay) {
+        GraphicFaceTracker(final GraphicOverlay overlay, final Face face) {
+            faceWrapper = new FaceWrapper();
+            faceWrapper.setFace(face);
             mOverlay = overlay;
             mFaceGraphic = new FaceGraphic(overlay);
         }
@@ -277,6 +274,7 @@ public final class MainActivity extends AppCompatActivity {
         @Override
         public void onNewItem(int faceId, Face item) {
             mFaceGraphic.setId(faceId);
+            adapter.add(faceWrapper);
         }
 
         /**
@@ -284,8 +282,10 @@ public final class MainActivity extends AppCompatActivity {
          */
         @Override
         public void onUpdate(FaceDetector.Detections<Face> detectionResults, Face face) {
+            faceWrapper.setFace(face);
             mOverlay.add(mFaceGraphic);
             mFaceGraphic.updateFace(face);
+            adapter.update(faceWrapper);
         }
 
         /**
@@ -305,6 +305,96 @@ public final class MainActivity extends AppCompatActivity {
         @Override
         public void onDone() {
             mOverlay.remove(mFaceGraphic);
+            adapter.remove(faceWrapper);
         }
     }
+    private class FacesAdapter extends RecyclerView.Adapter<FaceViewHolder> {
+
+        private final String[] anglesEndings = {"градус", "градуса", "градусов"};
+        private String endingGen(final int number, final String[] titles) {
+            int[] cases = {2, 0, 1, 1, 1, 2};
+            return titles[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[(number % 10 < 5) ? number % 10 : 5]];
+        }
+
+        private List<FaceWrapper> faceList = new ArrayList<>();
+
+        @Override
+        public FaceViewHolder onCreateViewHolder(final ViewGroup parent, final int viewType) {
+            final LayoutInflater context = LayoutInflater.from(MainActivity.this);
+            return new FaceViewHolder(context.inflate(R.layout.item_face, parent, false));
+        }
+
+        @Override
+        public void onBindViewHolder(final FaceViewHolder holder, final int position) {
+            final FaceWrapper faceWrapper = faceList.get(position);
+            final Face face = faceWrapper.getFace();
+            holder.idTextView.setText("Id: " + face.getId());
+
+
+            // поворот влево/вправо
+            final int rotation = (int) face.getEulerY();
+
+            // наклон влево, вправо
+            final int incline = (int) face.getEulerZ();
+
+            holder.rotationTextView.setText("Поворот на " + rotation + " " + endingGen(Math.abs(rotation), anglesEndings) + " " + (rotation >= 0 ? "влево" : "вправо"));
+            holder.inclineTextView.setText("Наклон: " + incline + " " + endingGen(Math.abs(incline), anglesEndings) + " " + (incline >= 0 ? "вправо" : "влево"));
+        }
+
+        @Override
+        public int getItemCount() {
+            return faceList.size();
+        }
+
+        void add(final FaceWrapper face) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    faceList.add(face);
+                    notifyItemInserted(faceList.size() - 1);
+                }
+            });
+        }
+
+        void remove(final FaceWrapper face) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    final int idx = faceList.indexOf(face);
+                    faceList.remove(idx);
+                    notifyItemRemoved(idx);
+                }
+            });
+        }
+
+        void update(final FaceWrapper face) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    final int idx = faceList.indexOf(face);
+                    notifyItemChanged(idx);
+                }
+            });
+        }
+
+    }
+
+    private class FaceViewHolder extends RecyclerView.ViewHolder {
+
+        TextView idTextView;
+
+        TextView rotationTextView;
+
+        TextView inclineTextView;
+
+        public FaceViewHolder(final View itemView) {
+            super(itemView);
+            idTextView = (TextView) itemView.findViewById(R.id.face_id);
+            inclineTextView = (TextView) itemView.findViewById(R.id.face_incline);
+            rotationTextView = (TextView) itemView.findViewById(R.id.face_rot);
+        }
+
+
+    }
+
 }

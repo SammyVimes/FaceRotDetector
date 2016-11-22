@@ -8,8 +8,9 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 
-import com.google.android.gms.samples.vision.face.facetracker.ui.camera.GraphicOverlay;
 import com.google.android.gms.vision.face.Face;
+
+import online.senya.facerotdetector.ui.camera.GraphicOverlay;
 
 /**
  * Graphic instance for rendering face position, orientation, and landmarks within an associated
@@ -32,11 +33,10 @@ class FaceGraphic extends GraphicOverlay.Graphic {
             Color.YELLOW
     };
     private static int mCurrentColorIndex = 0;
-
+    private final String[] anglesEndings = {"градус", "градуса", "градусов"};
     private Paint mFacePositionPaint;
     private Paint mIdPaint;
     private Paint mBoxPaint;
-
     private volatile Face mFace;
     private int mFaceId;
     private float mFaceHappiness;
@@ -64,7 +64,6 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         mFaceId = id;
     }
 
-
     /**
      * Updates the face instance from the detection of the most recent frame.  Invalidates the
      * relevant portions of the overlay to trigger a redraw.
@@ -73,6 +72,12 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         mFace = face;
         postInvalidate();
     }
+
+    private String endingGen(final int number, final String[] titles) {
+        int[] cases = {2, 0, 1, 1, 1, 2};
+        return titles[(number % 100 > 4 && number % 100 < 20) ? 2 : cases[(number % 10 < 5) ? number % 10 : 5]];
+    }
+
 
     /**
      * Draws the face annotations for position on the supplied canvas.
@@ -88,10 +93,17 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         float x = translateX(face.getPosition().x + face.getWidth() / 2);
         float y = translateY(face.getPosition().y + face.getHeight() / 2);
         canvas.drawCircle(x, y, FACE_POSITION_RADIUS, mFacePositionPaint);
-        canvas.drawText("id: " + mFaceId, x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint);
-        canvas.drawText("happiness: " + String.format("%.2f", face.getIsSmilingProbability()), x - ID_X_OFFSET, y - ID_Y_OFFSET, mIdPaint);
-        canvas.drawText("right eye: " + String.format("%.2f", face.getIsRightEyeOpenProbability()), x + ID_X_OFFSET * 2, y + ID_Y_OFFSET * 2, mIdPaint);
-        canvas.drawText("left eye: " + String.format("%.2f", face.getIsLeftEyeOpenProbability()), x - ID_X_OFFSET*2, y - ID_Y_OFFSET*2, mIdPaint);
+        canvas.drawText("fukboi id: " + mFaceId, x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint);
+
+        // поворот влево/вправо
+        final int rotation = (int) face.getEulerY();
+
+        // наклон влево, вправо
+        final int incline = (int) face.getEulerZ();
+
+        canvas.drawText("Поворот на " + rotation + " " + endingGen(Math.abs(rotation), anglesEndings) + "\n" + (rotation >= 0 ? "влево" : "вправо"), x - ID_X_OFFSET, y - ID_Y_OFFSET, mIdPaint);
+        canvas.drawText("Наклон: " + incline + " " + endingGen(Math.abs(incline), anglesEndings) + "\n" + (incline >= 0 ? "вправо" : "влево"), x + ID_X_OFFSET * 2, y + ID_Y_OFFSET * 2, mIdPaint);
+//        canvas.drawText("left eye: " + String.format("%.2f", face.getIsLeftEyeOpenProbability()), x - ID_X_OFFSET*2, y - ID_Y_OFFSET*2, mIdPaint);
 
         // Draws a bounding box around the face.
         float xOffset = scaleX(face.getWidth() / 2.0f);
