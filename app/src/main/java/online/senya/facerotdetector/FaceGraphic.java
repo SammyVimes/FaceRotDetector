@@ -9,6 +9,9 @@ import android.graphics.Color;
 import android.graphics.Paint;
 
 import com.google.android.gms.vision.face.Face;
+import com.google.android.gms.vision.face.Landmark;
+
+import java.util.List;
 
 import online.senya.facerotdetector.ui.camera.GraphicOverlay;
 
@@ -93,7 +96,16 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         float x = translateX(face.getPosition().x + face.getWidth() / 2);
         float y = translateY(face.getPosition().y + face.getHeight() / 2);
         canvas.drawCircle(x, y, FACE_POSITION_RADIUS, mFacePositionPaint);
-        canvas.drawText("fukboi id: " + mFaceId, x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint);
+        canvas.drawText("id: " + mFaceId, x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint);
+
+
+        final List<Landmark> landmarks = face.getLandmarks();
+
+        for (Landmark landmark : landmarks) {
+            int cx = (int) (landmark.getPosition().x);
+            int cy = (int) (landmark.getPosition().y);
+            canvas.drawCircle(cx, cy, 10, mIdPaint);
+        }
 
         // поворот влево/вправо
         final int rotation = (int) face.getEulerY();

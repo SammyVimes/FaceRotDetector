@@ -34,10 +34,7 @@ import java.util.List;
 import online.senya.facerotdetector.ui.camera.CameraSourcePreview;
 import online.senya.facerotdetector.ui.camera.GraphicOverlay;
 
-/**
- * Activity for the face tracker app.  This app detects faces with the rear facing camera, and draws
- * overlay graphics to indicate the position, size, and ID of each face.
- */
+
 public final class MainActivity extends AppCompatActivity {
     private static final String TAG = "FaceTracker";
 

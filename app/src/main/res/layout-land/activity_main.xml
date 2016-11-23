@@ -11,8 +11,8 @@
     <online.senya.facerotdetector.ui.camera.CameraSourcePreview
         android:id="@+id/preview"
         android:layout_weight="2"
-        android:layout_width="match_parent"
-        android:layout_height="0dp">
+        android:layout_width="0dp"
+        android:layout_height="match_parent">
 
         <online.senya.facerotdetector.ui.camera.GraphicOverlay
             android:id="@+id/faceOverlay"
@@ -25,7 +25,7 @@
     <android.support.v7.widget.RecyclerView
         android:id="@+id/faces"
         android:layout_weight="1"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"/>
+        android:layout_width="0dp"
+        android:layout_height="match_parent"/>
 
 </LinearLayout>
