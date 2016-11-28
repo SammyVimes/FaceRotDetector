@@ -107,13 +107,13 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         // Draws a circle at the position of the detected face, with the face's track id below.
         float x = translateX(face.getPosition().x + face.getWidth() / 2);
         float y = translateY(face.getPosition().y + face.getHeight() / 2);
-        canvas.drawCircle(x, y, FACE_POSITION_RADIUS, mFacePositionPaint);
         canvas.drawText("id: " + mFaceId, x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint);
 
         final List<Landmark> landmarks = face.getLandmarks();
 
         Landmark leftEye = null;
         Landmark rightEye = null;
+        Landmark nose = null;
 
         for (Landmark landmark : landmarks) {
             int cx = (int) (landmark.getPosition().x);
@@ -124,13 +124,12 @@ class FaceGraphic extends GraphicOverlay.Graphic {
             if (landmark.getType() == Landmark.RIGHT_EYE) {
                 rightEye = landmark;
             }
+            if (landmark.getType() == Landmark.NOSE_BASE) {
+                nose = landmark;
+            }
         }
 
         if (leftEye != null && rightEye != null) {
-//            float lX = (int) (leftEye.getPosition().x) * xMod;
-//            float lY = (int) (leftEye.getPosition().y) * yMod;
-//            float rX = (int) (rightEye.getPosition().x) * xMod;
-//            float rY = (int) (rightEye.getPosition().y) * yMod;
             float lX = translateX(leftEye.getPosition().x);
             float lY = translateY(leftEye.getPosition().y);
             float rX = translateX(rightEye.getPosition().x);
@@ -138,6 +137,13 @@ class FaceGraphic extends GraphicOverlay.Graphic {
             canvas.drawCircle(lX, lY, 10, mIdPaint);
             canvas.drawCircle(rX, rY, 10, mIdPaint);
             canvas.drawLine(lX, lY, rX, rY, mIdPaint);
+        }
+
+        if (nose != null) {
+            float nX = translateX(nose.getPosition().x);
+            float nY = translateY(nose.getPosition().y);
+            canvas.drawCircle(nX, nY, 10, mIdPaint);
+            canvas.drawLine(nX, nY - 100, nX, nY + 100, mIdPaint);
         }
 
 
