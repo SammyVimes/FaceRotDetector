@@ -82,11 +82,23 @@ class FaceGraphic extends GraphicOverlay.Graphic {
     }
 
 
+    int height = 640;
+    int width = 480;
+
     /**
      * Draws the face annotations for position on the supplied canvas.
      */
     @Override
     public void draw(Canvas canvas) {
+
+        int cW = canvas.getWidth();
+        int cH = canvas.getHeight();
+
+        // модификатор сдвига (камера снимает 640*480, а канвас другого размера)
+        float xMod = (float) cW / width;
+        float yMod = (float) cH / height;
+
+
         Face face = mFace;
         if (face == null) {
             return;
@@ -98,24 +110,36 @@ class FaceGraphic extends GraphicOverlay.Graphic {
         canvas.drawCircle(x, y, FACE_POSITION_RADIUS, mFacePositionPaint);
         canvas.drawText("id: " + mFaceId, x + ID_X_OFFSET, y + ID_Y_OFFSET, mIdPaint);
 
-
         final List<Landmark> landmarks = face.getLandmarks();
+
+        Landmark leftEye = null;
+        Landmark rightEye = null;
 
         for (Landmark landmark : landmarks) {
             int cx = (int) (landmark.getPosition().x);
             int cy = (int) (landmark.getPosition().y);
-            canvas.drawCircle(cx, cy, 10, mIdPaint);
+            if (landmark.getType() == Landmark.LEFT_EYE) {
+                leftEye = landmark;
+            }
+            if (landmark.getType() == Landmark.RIGHT_EYE) {
+                rightEye = landmark;
+            }
         }
 
-        // поворот влево/вправо
-        final int rotation = (int) face.getEulerY();
+        if (leftEye != null && rightEye != null) {
+//            float lX = (int) (leftEye.getPosition().x) * xMod;
+//            float lY = (int) (leftEye.getPosition().y) * yMod;
+//            float rX = (int) (rightEye.getPosition().x) * xMod;
+//            float rY = (int) (rightEye.getPosition().y) * yMod;
+            float lX = translateX(leftEye.getPosition().x);
+            float lY = translateY(leftEye.getPosition().y);
+            float rX = translateX(rightEye.getPosition().x);
+            float rY = translateY(rightEye.getPosition().y);
+            canvas.drawCircle(lX, lY, 10, mIdPaint);
+            canvas.drawCircle(rX, rY, 10, mIdPaint);
+            canvas.drawLine(lX, lY, rX, rY, mIdPaint);
+        }
 
-        // наклон влево, вправо
-        final int incline = (int) face.getEulerZ();
-
-        canvas.drawText("Поворот на " + rotation + " " + endingGen(Math.abs(rotation), anglesEndings) + "\n" + (rotation >= 0 ? "влево" : "вправо"), x - ID_X_OFFSET, y - ID_Y_OFFSET, mIdPaint);
-        canvas.drawText("Наклон: " + incline + " " + endingGen(Math.abs(incline), anglesEndings) + "\n" + (incline >= 0 ? "вправо" : "влево"), x + ID_X_OFFSET * 2, y + ID_Y_OFFSET * 2, mIdPaint);
-//        canvas.drawText("left eye: " + String.format("%.2f", face.getIsLeftEyeOpenProbability()), x - ID_X_OFFSET*2, y - ID_Y_OFFSET*2, mIdPaint);
 
         // Draws a bounding box around the face.
         float xOffset = scaleX(face.getWidth() / 2.0f);
